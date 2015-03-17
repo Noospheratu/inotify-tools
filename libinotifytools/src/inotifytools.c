@@ -1331,10 +1331,10 @@ int inotifytools_watch_recursively_with_exclude( char const * path, int events,
 					return 0;
 				}
 			}
-			else if ( S_ISDIR( my_stat.st_mode ) &&
+			else if ( (S_ISDIR( my_stat.st_mode ) || S_ISREG( my_stat.st_mode )) &&
 			          !S_ISLNK( my_stat.st_mode )) {
 				free( next_file );
-				nasprintf(&next_file,"%s%s/", my_path, ent->d_name);
+				nasprintf(&next_file,"%s%s%s", my_path, ent->d_name, S_ISDIR( my_stat.st_mode ) ? "/" : "");
 				static unsigned int no_watch;
 				static char const ** exclude_entry;
 
@@ -1356,10 +1356,12 @@ int inotifytools_watch_recursively_with_exclude( char const * path, int events,
 				}
 				if (!no_watch) {
 					static int status;
-					status = inotifytools_watch_recursively_with_exclude(
-					              next_file,
-					              events,
-					              exclude_list );
+					status = S_ISDIR( my_stat.st_mode ) ?
+						 inotifytools_watch_recursively_with_exclude(
+							next_file,
+							events,
+							exclude_list ) :
+						inotifytools_watch_file( next_file, events );
 					// For some errors, we will continue.
 					if ( !status && (EACCES != error) && (ENOENT != error) &&
 					     (ELOOP != error) ) {
